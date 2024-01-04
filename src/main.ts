@@ -5,7 +5,7 @@ const app = new App({
 	props: {
 		label: 'world',
 		age: 12,
-	}
+	},
 });
 
 export default app;
