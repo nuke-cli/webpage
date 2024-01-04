@@ -3,10 +3,18 @@
 	export let age: number;
 </script>
 
-<h1>Hello, {label}!</h1>
+<div class="wrapper">
+	<h1>Hello, {label}!</h1>
+</div>
 
-<style>
-	h1 {
-		color: purple;
+<style lang="scss">
+	.wrapper {
+		width: 100%;
+		display: flex;
+		align-items: center;
+	}
+
+	.wrapper > h1 {
+		color: green;
 	}
 </style>
