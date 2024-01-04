@@ -1,5 +1,6 @@
-<script>
-	export let name;
+<script lang="ts">
+	export let label: string;
+	export let age: number;
 </script>
 
 <style>
@@ -8,4 +9,4 @@
 	}
 </style>
 
-<h1>Hello {name}!</h1>
+<h1>Hello, {label}!</h1>
