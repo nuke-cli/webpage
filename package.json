@@ -1,24 +1,21 @@
 {
-  "name": "svelte-setup",
+  "name": "nuke-cli-webpage",
   "version": "0.0.1",
-  "description": "Svelte setup to start your project.",
+  "description": "nuke-cli webpage.",
   "main": "index.js",
   "scripts": {
     "build": "rollup -c",
     "app:dev": "rollup -c -w",
     "start": "sirv public --host 0.0.0.0 --port 4000",
     "app:up": "docker-compose up -d",
-    "app:down": "docker-compose down"
+    "app:down": "docker-compose down",
+    "lint": "prettier --write '**/*.svelte' '**/*.test.ts' '**/*.ts' --no-error-on-unmatched-pattern",
+    "postinstall": "husky install"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/cl4pper/svelte-setup.git"
   },
-  "keywords": [
-    "svelte",
-    "boilerplate",
-    "web"
-  ],
   "author": "cl4pper",
   "license": "ISC",
   "bugs": {
@@ -28,12 +25,21 @@
   "devDependencies": {
     "@rollup/plugin-commonjs": "^16.0.0",
     "@rollup/plugin-node-resolve": "^10.0.0",
+    "@rollup/plugin-typescript": "^11.1.5",
+    "@tsconfig/svelte": "^5.0.2",
+    "husky": "^8.0.3",
+    "prettier": "^3.1.1",
+    "prettier-plugin-svelte": "^3.1.2",
     "rollup": "^2.3.4",
     "rollup-plugin-css-only": "^3.0.0",
     "rollup-plugin-livereload": "^2.0.0",
     "rollup-plugin-svelte": "^7.0.0",
     "rollup-plugin-terser": "^7.0.0",
-    "svelte": "^3.0.0"
+    "sass": "^1.69.7",
+    "svelte": "^3.0.0",
+    "svelte-preprocess": "^5.1.3",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3"
   },
   "dependencies": {
     "dotenv": "^16.3.1",
