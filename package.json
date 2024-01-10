@@ -1,7 +1,7 @@
 {
-  "name": "svelte-setup",
+  "name": "nuke-cli-webpage",
   "version": "0.0.1",
-  "description": "Svelte setup to start your project.",
+  "description": "nuke-cli webpage.",
   "main": "index.js",
   "scripts": {
     "build": "rollup -c",
@@ -16,11 +16,6 @@
     "type": "git",
     "url": "git+https://github.com/cl4pper/svelte-setup.git"
   },
-  "keywords": [
-    "svelte",
-    "boilerplate",
-    "web"
-  ],
   "author": "cl4pper",
   "license": "ISC",
   "bugs": {
