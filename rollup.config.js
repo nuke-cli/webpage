@@ -6,6 +6,8 @@ import { terser } from 'rollup-plugin-terser';
 import sveltePreprocess from 'svelte-preprocess';
 import typescript from '@rollup/plugin-typescript';
 import css from 'rollup-plugin-css-only';
+import alias from '@rollup/plugin-alias';
+import path from 'path';
 
 const production = !process.env.ROLLUP_WATCH;
 
@@ -48,6 +50,14 @@ export default {
 		// we'll extract any component CSS out into
 		// a separate file - better for performance
 		css({ output: 'bundle.css' }),
+
+		// Mirror the path aliases defined in tsconfig.json
+		alias({
+			entries: [
+				{ find: '@utils', replacement: path.resolve(__dirname, 'src/utils/index.ts') },
+				{ find: '@components', replacement: path.resolve(__dirname, 'src/components/index.ts') }
+			]
+		}),
 
 		// If you have external dependencies installed from
 		// npm, you'll most likely need these plugins. In
