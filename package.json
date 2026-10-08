@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "description": "nuke-cli webpage.",
   "main": "index.js",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "build": "rollup -c",
     "app:dev": "rollup -c -w",

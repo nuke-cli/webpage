@@ -1,8 +1,8 @@
-FROM node:17-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 COPY package.json ./
-RUN yarn install
+RUN npm install
 COPY . .
 EXPOSE 8080
 ENV HOST=0.0.0.0
