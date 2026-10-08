@@ -4,11 +4,11 @@ type Option = {
 };
 
 function classnames(main: string, options: Option[]): string {
-	const appliedClasses: string = options.reduce((prev, curr) => {
-		return `${prev} ${curr.condition && curr.class}`;
-	}, '');
+	const appliedClasses: string[] = options
+		.filter((option) => option.condition)
+		.map((option) => option.class);
 
-	return `${main} ${appliedClasses}`;
+	return [main, ...appliedClasses].join(' ');
 }
 
 export default classnames;
