@@ -3,12 +3,12 @@ name: commit
 description: Commit the staged changes using the project's commit message standard.
 disable-model-invocation: true
 argument-hint: '[optional hint for the commit message]'
-allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git commit -F -:*)
+allowed-tools: Bash(.claude/skills/commit/branch.sh), Bash(date:*), Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git commit -F -:*)
 ---
 
 ## Context
 
-- Branch: !`b=$(git branch --show-current); if [ -z "$b" ]; then for d in rebase-merge rebase-apply; do f=$(git rev-parse --git-path "$d/head-name"); [ -z "$b" ] && [ -f "$f" ] && b="rebasing in $(sed "s#^refs/heads/##" "$f")"; done; fi; echo "${b:-DETACHED}"`
+- Branch: !`.claude/skills/commit/branch.sh`
 - Datetime: !`date '+%Y-%m-%dT%H:%M:%S%z'`
 - Session ID: ${CLAUDE_SESSION_ID}
 - Status: !`git status --short`
@@ -25,7 +25,8 @@ Run exactly `git commit -F -` with no other flags or paths: never `-a`/`--all`, 
 `-o`/`--only`, `--amend`, or file paths, since each of these commits more than the index.
 Describe only what appears in the staged diff.
 If nothing is staged, stop and tell the user.
-If the branch is `DETACHED`, stop and tell the user that HEAD is detached outside of a rebase.
+If the branch is `DETACHED`, stop and tell the user that HEAD is not on a branch (this includes
+a rebase that was started from a detached HEAD).
 
 The message must follow this format exactly:
 
