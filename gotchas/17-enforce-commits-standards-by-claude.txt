@@ -24,11 +24,17 @@ FIXED
 4. branch.sh untracked while SKILL.md referenced it
    Fix: committed together with its executable bit (mode 100755). (cc9e92b)
 
+5. Co-Authored-By trailer vs "no extra trailers"
+   Claude Code's attribution instruction asks for a Co-Authored-By line; the skill forbids
+   extra trailers, so output could vary between commits.
+   Fix: CLAUDE.md "Commits" section states no other lines or trailers. CLAUDE.md outranks
+   the default attribution instruction, so commits carry no Co-Authored-By line.
+
 
 OPEN
 ====
 
-5. Script path only works from the repo root
+6. Script path only works from the repo root
    SKILL.md calls `.claude/skills/commit/branch.sh` by a relative path, and the allowed-tools
    entry is an exact match on that spelling. If the session cwd is a subdirectory (e.g. after
    `cd src`), the lookup fails, its error text can land in `branch:`, and the DETACHED stop is
@@ -36,26 +42,22 @@ OPEN
    `$(git rev-parse --show-toplevel)/...`, `${CLAUDE_PROJECT_DIR}`, or a skill-dir variable
    (untested).
 
-6. Forbidden commit flags are still pre-approved
+7. Forbidden commit flags are still pre-approved
    `Bash(git commit -F -:*)` is a prefix match, so `git commit -F - -a`, `--amend`, `-o <path>`
    and `--no-verify` run without a prompt. Only the skill's instructions forbid them. A hard
    guarantee needs a PreToolUse hook (the issue chose a command only, so none was added).
 
-7. Whole staged diff is inlined into the prompt
+8. Whole staged diff is inlined into the prompt
    `git diff --cached` has no size limit; a staged lockfile, bundle or large SVG can flood the
    context and push the instructions out of view. Suggested: inline `git diff --cached --stat`
    and let the model read hunks with the allowed `git diff`.
 
-8. Husky pre-commit hook never runs
+9. Husky pre-commit hook never runs
    `core.hooksPath` is unset and `.husky/_/husky.sh` is missing (Node is not on the host, so
    husky install never ran). `yarn lint` has not been gating any commit. If the hook is ever
    enabled: `yarn` is not on the host PATH, so every /commit would fail; and `prettier --write`
    rewrites files after staging, so the commit holds the unformatted version and the formatted
    one is left unstaged.
-
-9. Co-Authored-By trailer vs "no extra trailers"
-   Claude Code's attribution instruction asks for a Co-Authored-By line; the skill forbids
-   extra trailers. Output may vary between commits. The skill should state which one wins.
 
 10. datetime offset is not RFC 3339
     `%z` gives `+0100`; RFC 3339 / extended ISO 8601 needs `+01:00`. Strict parsers (some JS

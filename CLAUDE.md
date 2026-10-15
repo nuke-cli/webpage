@@ -15,7 +15,7 @@ Scripts run via `npm run <script>` or `yarn <script>`.
 - `app:dev` — Rollup watch mode; also spawns `start -- --dev` and livereloads on changes to `public/`. Serves on port 4000.
 - `build` — production build (minified with terser). Production mode is inferred from the absence of `ROLLUP_WATCH`, not from `NODE_ENV`.
 - `start` — serve `public/` with sirv on `0.0.0.0:4000`. Requires a prior `build`.
-- `lint` — Prettier `--write` over `.svelte` and `.ts` files. Runs automatically on commit through the Husky `pre-commit` hook (`yarn lint`).
+- `lint` — Prettier `--write` over `.svelte` and `.ts` files. Wired to the Husky `pre-commit` hook (`yarn lint`), but the hook is not active in this checkout: `core.hooksPath` is unset and `.husky/_/husky.sh` is missing, so nothing is linted on commit.
 - `app:up` / `app:down` — `docker-compose up -d` / `down`. Container `svelte-application`; host/container ports come from `LOCAL_PORT` / `DOCKER_PORT` in `.env` (both 4000).
 
 There is no test runner or type-check script configured.
@@ -28,6 +28,32 @@ There is no test runner or type-check script configured.
 - Component styling uses BEM-like class names (`Text`, `Text--bold`) built with the local `classnames(main, [{ class, condition }])` helper, and scoped `<style lang="scss">` blocks.
 - Docker: the image builds the bundle at image build time (`RUN npm run build`) and serves it with `yarn start`. Only `./src` is volume-mounted and nothing watches it, so source changes need `docker compose up -d --build` to show up.
 - Node is not installed on the host machine; run npm commands in a container, e.g. `docker run --rm -v "$PWD":/app -v nuke_nm:/app/node_modules -w /app node:24-alpine npm run build`.
+
+## Commits
+
+Commit messages follow this format (issue #17):
+
+```
+<type>: <message>
+
+<body>
+
+branch: <branch>
+session_id: <session id>
+datetime: <datetime>
+```
+
+- `type` is a Conventional Commits type; `message` is a short, lowercase, imperative summary.
+- `body` is an optional `- ` bulleted list. Without it, one blank line separates the summary from `branch:`.
+- `branch` is the current branch, `rebasing in <branch>` during a rebase. Don't commit when HEAD is not on a branch.
+- `datetime` uses `date '+%Y-%m-%dT%H:%M:%S%z'` (e.g. `2026-10-16T00:25:32+0100`).
+- No other lines or trailers.
+
+The `/commit` skill (`.claude/skills/commit/`) writes these messages. It only runs when the user types `/commit` (`disable-model-invocation: true`); when asked to commit without it, follow the same format by hand. It commits staged changes only, via `git commit -F -`, and never stages files. `branch.sh` computes the `branch` value; the skill calls it by a path relative to the repo root.
+
+## Gotchas
+
+`gotchas/<branch>.txt` records code-review findings for a branch, grouped as fixed (with commit refs), open, and by design. Read the file for the code you're changing before working on it, and update it when a finding is fixed.
 
 ## Style
 
