@@ -1,0 +1,95 @@
+Gotchas: 17-enforce-commits-standards-by-claude
+Issue: https://github.com/nuke-cli/webpage/issues/17
+Scope: the /commit skill (.claude/skills/commit/SKILL.md and branch.sh)
+Source: four /code-review passes run on 2026-10-15/16, merged and de-duplicated.
+
+
+FIXED
+=====
+
+1. Context commands were not pre-approved
+   The `!` commands for Branch and Datetime were not covered by allowed-tools, so /commit
+   could stop on a permission prompt or start without those values.
+   Fix: moved the branch lookup into branch.sh; pre-approved branch.sh and `date`. (cc9e92b)
+
+2. Rebase started from a detached HEAD
+   git writes the literal text "detached HEAD" to rebase-merge/head-name, so the script
+   printed "rebasing in detached HEAD" and the skill committed with it instead of stopping.
+   Fix: report DETACHED in that case. (cc9e92b)
+
+3. head-name content other than a branch ref
+   Non-branch refs, an empty name, or a trailing CR passed through as "rebasing in <raw>".
+   Fix: accept only refs/heads/<name> from the first line, strip CR, else DETACHED. (ad8861c)
+
+4. branch.sh untracked while SKILL.md referenced it
+   Fix: committed together with its executable bit (mode 100755). (cc9e92b)
+
+
+OPEN
+====
+
+5. Script path only works from the repo root
+   SKILL.md calls `.claude/skills/commit/branch.sh` by a relative path, and the allowed-tools
+   entry is an exact match on that spelling. If the session cwd is a subdirectory (e.g. after
+   `cd src`), the lookup fails, its error text can land in `branch:`, and the DETACHED stop is
+   skipped. The path and its allowed-tools entry must change together. Options:
+   `$(git rev-parse --show-toplevel)/...`, `${CLAUDE_PROJECT_DIR}`, or a skill-dir variable
+   (untested).
+
+6. Forbidden commit flags are still pre-approved
+   `Bash(git commit -F -:*)` is a prefix match, so `git commit -F - -a`, `--amend`, `-o <path>`
+   and `--no-verify` run without a prompt. Only the skill's instructions forbid them. A hard
+   guarantee needs a PreToolUse hook (the issue chose a command only, so none was added).
+
+7. Whole staged diff is inlined into the prompt
+   `git diff --cached` has no size limit; a staged lockfile, bundle or large SVG can flood the
+   context and push the instructions out of view. Suggested: inline `git diff --cached --stat`
+   and let the model read hunks with the allowed `git diff`.
+
+8. Husky pre-commit hook never runs
+   `core.hooksPath` is unset and `.husky/_/husky.sh` is missing (Node is not on the host, so
+   husky install never ran). `yarn lint` has not been gating any commit. If the hook is ever
+   enabled: `yarn` is not on the host PATH, so every /commit would fail; and `prettier --write`
+   rewrites files after staging, so the commit holds the unformatted version and the formatted
+   one is left unstaged.
+
+9. Co-Authored-By trailer vs "no extra trailers"
+   Claude Code's attribution instruction asks for a Co-Authored-By line; the skill forbids
+   extra trailers. Output may vary between commits. The skill should state which one wins.
+
+10. datetime offset is not RFC 3339
+    `%z` gives `+0100`; RFC 3339 / extended ISO 8601 needs `+01:00`. Strict parsers (some JS
+    engines, Python fromisoformat < 3.11) reject it. Only matters if a tool parses the
+    `datetime:` line. BSD date on macOS has no `%:z`; `date -Iseconds` needs testing.
+    Changing it makes earlier commits inconsistent with new ones.
+
+11. `date` is pre-approved with any arguments
+    `Bash(date:*)` also covers e.g. `date -s ...`. Least privilege:
+    `Bash(date '+%Y-%m-%dT%H:%M:%S%z')`.
+
+12. Redundant loop guard in branch.sh
+    The `[ -z "$b" ]` check keeps the loop going after a match and spawns an extra
+    `git rev-parse`. A `break` on match is clearer. Cleanup only, no behaviour change.
+
+13. Misleading DETACHED outside a git repo
+    If git commands fail (not a repo, corrupted gitdir), the script prints DETACHED and git's
+    stderr leaks into the context, so the user is told HEAD is detached instead of the real
+    problem. Unlikely in practice.
+
+
+BY DESIGN (won't fix)
+=====================
+
+14. disable-model-invocation: true
+    Claude cannot run /commit on its own; a plain "commit" request bypasses the skill and the
+    format is followed by hand. Chosen deliberately: the issue asked for a command only.
+
+15. `branch: rebasing in <branch>` during a rebase
+    Flagged as unparseable as a branch name. It is the requested format.
+
+16. Refusing to commit on any detached HEAD
+    Also covers checked-out tags/shas, `git am`, bisect, and `rebase --onto` from a detached
+    HEAD. Requested behaviour.
+
+17. Recovering the branch for a detached-HEAD rebase
+    Suggested reading onto/orig-head. Not possible: such a rebase never had a branch.
