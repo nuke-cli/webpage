@@ -3,4 +3,3 @@
 *lock*
 # Claude Code personal settings
 .claude/settings.local.json
-.claude/hooks/

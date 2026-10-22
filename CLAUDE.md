@@ -51,6 +51,17 @@ datetime: <datetime>
 
 The `/commit` skill (`.claude/skills/commit/`) writes these messages. It only runs when the user types `/commit` (`disable-model-invocation: true`); when asked to commit without it, follow the same format by hand. It commits staged changes only, via `git commit -F -`, and never stages files. `branch.sh` computes the `branch` value; the skill calls it by a path relative to the repo root.
 
+## Session context
+
+The `.claude/hooks/store-context.sh` hook (wired in `.claude/settings.json`, issue #18) shares Claude's plan and session context with the `nuke-cli/claude` repo, under `webpage/context/<branch>/`:
+
+- `plan_<ticket>.md`: the approved plan. The ticket is the branch's leading number (`plan.md` when there is none).
+- `context.txt`: the session's prompts and Claude's text replies on that branch, one `==== START/END OF SESSION_ID <id> ====` block per session. Each run replaces only its own session's block, so other sessions and machines are kept.
+
+It runs when a plan is approved (`ExitPlanMode`) and after a successful `git push` run by Claude (not on `--dry-run`). On a push it uploads the context and the last plan approved on the branch in that session; without one, the remote plan is left alone. Git commands run outside Claude Code don't trigger it. Files are committed straight to `main` through the GitHub contents API, which needs `gh auth login` with push access; unchanged files aren't re-committed. `STORE_CONTEXT_REPO` and `STORE_CONTEXT_DIR` override the target repo and folder.
+
+`nuke-cli/claude` is public, so a session's prompts and replies are published on every plan approval and push.
+
 ## Gotchas
 
 `gotchas/<branch>.txt` records code-review findings for a branch, grouped as fixed (with commit refs), open, and by design. Read the file for the code you're changing before working on it, and update it when a finding is fixed.
