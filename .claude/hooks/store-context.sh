@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# PostToolUse(ExitPlanMode): push the approved plan and this session's context on the current
+# PostToolUse(ExitPlanMode, Bash): push the approved plan and this session's context on the current
 # branch to nuke-cli/claude, as webpage/context/<branch>/plan_<ticket>.md and context.txt
-# (issue #18). context.txt keeps one block per session ID, so other sessions' blocks survive. The
-# files are written through the GitHub contents API, not git push, so they cannot retrigger a push
-# hook.
+# (issue #18). Runs when a plan is approved and after a successful git push; failed commands go to
+# PostToolUseFailure, so they never reach this hook. context.txt keeps one block per session ID, so
+# other sessions' blocks survive. The files are written through the GitHub contents API, not git
+# push, so they cannot retrigger this hook.
 
 repo=${STORE_CONTEXT_REPO:-nuke-cli/claude}
 base=${STORE_CONTEXT_DIR:-webpage/context}
@@ -12,10 +13,20 @@ dir=${CLAUDE_PROJECT_DIR:-$PWD}
 input=$(cat)
 
 tool=$(jq -r '.tool_name // ""' <<<"$input")
+cmd=$(jq -r '.tool_input.command // ""' <<<"$input")
 session=$(jq -r '.session_id // ""' <<<"$input")
 transcript=$(jq -r '.transcript_path // ""' <<<"$input")
 
-[ "$tool" = ExitPlanMode ] || exit 0
+case "$tool" in
+ExitPlanMode) ;;
+Bash)
+	# Only a git push that starts the line or follows ;, & or |.
+	grep -Eq '(^|[;&|])[[:space:]]*git[[:space:]]+push([[:space:]]|$)' <<<"$cmd" || exit 0
+	# A dry run pushes nothing.
+	grep -Eq 'git[[:space:]]+push[[:space:]].*--dry-run' <<<"$cmd" && exit 0
+	;;
+*) exit 0 ;;
+esac
 [ -n "$session" ] || exit 0
 
 # The branch being rebased counts as the current branch. A detached HEAD has no folder.
@@ -30,8 +41,20 @@ context_path="$base/$branch/context.txt"
 tmp=$(mktemp -d) || exit 0
 trap 'rm -rf "$tmp"' EXIT
 
-jq -r '.tool_input.plan // .tool_response.plan // ""' <<<"$input" >"$tmp/plan.md"
-[ -s "$tmp/plan.md" ] && [ "$(tr -d '[:space:]' <"$tmp/plan.md")" ] || exit 0
+# On a push, the plan is the last one approved on this branch in this session. Without one, the
+# remote plan is left as it is.
+if [ "$tool" = ExitPlanMode ]; then
+	jq -j '.tool_input.plan // .tool_response.plan // ""' <<<"$input" >"$tmp/plan.md"
+elif [ -f "$transcript" ]; then
+	jq -njR --arg branch "$branch" '
+		[inputs | fromjson? | select(.type == "user" and .gitBranch == $branch)
+			| .toolUseResult | objects | .plan | strings]
+		| last // ""
+	' "$transcript" >"$tmp/plan.md"
+fi
+has_plan=""
+[ -s "$tmp/plan.md" ] && [ "$(tr -d '[:space:]' <"$tmp/plan.md")" ] && has_plan=1
+[ -n "$has_plan" ] || [ "$tool" = Bash ] || exit 0
 
 # Only this branch's prompts and Claude's text replies. fromjson? skips a line that is still being
 # written.
@@ -101,11 +124,14 @@ upload_context() {
 }
 
 pushed=() failed=()
-if upload_plan || upload_plan; then pushed+=("${plan_path##*/}"); else failed+=("${plan_path##*/}"); fi
+if [ -n "$has_plan" ]; then
+	if upload_plan || upload_plan; then pushed+=("${plan_path##*/}"); else failed+=("${plan_path##*/}"); fi
+fi
 if [ -n "$block" ]; then
 	if upload_context || upload_context; then pushed+=(context.txt); else failed+=(context.txt); fi
 fi
 
+[ ${#pushed[@]} -gt 0 ] || [ ${#failed[@]} -gt 0 ] || exit 0
 msg="Session context:"
 [ ${#pushed[@]} -gt 0 ] && msg+=" pushed ${pushed[*]} to $repo/$base/$branch/."
 [ ${#failed[@]} -gt 0 ] && msg+=" push of ${failed[*]} to $repo failed."
